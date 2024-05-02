@@ -5,6 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(MeshRenderer))]
 public class Cube : MonoBehaviour
 {
+    [SerializeField] private int _random;
     [SerializeField] private float _cubeSize;
     [SerializeField] private Vector3Int _worldSize;
 
@@ -44,7 +45,7 @@ public class Cube : MonoBehaviour
             {
                 for (int z = 0; z < _worldSize.z; z++)
                 {
-                    _voxels[x, y, z] = Random.Range(0, 100) > 50 ? (byte)1 : (byte)0;
+                    _voxels[x, y, z] = Random.Range(0, 100) >= _random ? (byte)1 : (byte)0;
                 }
             }
         }
@@ -59,20 +60,37 @@ public class Cube : MonoBehaviour
                 for (int z = 0; z < _worldSize.z; z++)
                 {
                     if (_voxels[x, y, z] == 1)
-                        CreateCube(new Vector3(x, y, z));
+                        CreateCube(new Vector3Int(x, y, z));
                 }
             }
         }
     }
 
-    private void CreateCube(Vector3 coordinates)
+    private void CreateCube(Vector3Int c)
     {
-        GenerateFace(coordinates, Right, Up);
-        GenerateFace(coordinates + Right, Forward, Up);
-        GenerateFace(coordinates + Forward, Back, Up);
-        GenerateFace(coordinates + Forward + Right, Left, Up);
-        GenerateFace(coordinates + Up, Right, Forward);
-        GenerateFace(coordinates + Forward, Right, Back);
+        //Front
+        if (c.z - 1 < 0 || _voxels[c.x, c.y, c.z - 1] == 0)
+            GenerateFace(c, Right, Up);
+
+        //Right
+        if (c.x + 1 >= _worldSize.x || _voxels[c.x + 1, c.y, c.z] == 0)
+            GenerateFace(c + Right, Forward, Up);
+
+        //Left
+        if (c.x - 1 < 0 || _voxels[c.x - 1, c.y, c.z] == 0)
+            GenerateFace(c + Forward, Back, Up);
+
+        //Back
+        if (c.z + 1 >= _worldSize.z || _voxels[c.x, c.y, c.z + 1] == 0)
+            GenerateFace(c + Forward + Right, Left, Up);
+
+        //Bottom
+        if (c.y - 1 < 0 || _voxels[c.x, c.y - 1, c.z] == 0)
+            GenerateFace(c + Forward, Right, Back);
+
+        //Top
+        if (c.y + 1 >= _worldSize.y || _voxels[c.x, c.y + 1, c.z] == 0)
+            GenerateFace(c + Up, Right, Forward);
     }
 
     // 2 3 | Clock-wise to 
