@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,7 +8,7 @@ public class WorldCreator
     private List<Vector3> _vertices = new List<Vector3>();
     private List<int> _triangles = new List<int>();
 
-    private Vector3 _worldSize;
+    private Vector3Int _worldSize;
     private int _lastVertex;
     private float _cubeSize;
     private Material _cubeMaterial;
@@ -22,7 +21,7 @@ public class WorldCreator
         _cubeSize = cubeSize;
         _cubeMaterial = cubeMaterial;
         _worldRoot = new GameObject("World Root");
-        _worldSize = new Vector3(_voxels.GetLength(0), _voxels.GetLength(1), _voxels.GetLength(2));
+        _worldSize = new Vector3Int(_voxels.GetLength(0), _voxels.GetLength(1), _voxels.GetLength(2));
 
         CreateWorld();
     }
@@ -47,33 +46,35 @@ public class WorldCreator
     private void CreateCube(Vector3Int c)
     {
         //Front
-        if (c.z - 1 < 0 || _voxels[c.x, c.y, c.z - 1] == 0)
+        if (c.z - 1 > 0 && _voxels[c.x, c.y, c.z - 1] == 0)
             GenerateFace(c, Right, Up);
 
         //Right
-        if (c.x + 1 >= _voxels.GetLength(0) || _voxels[c.x + 1, c.y, c.z] == 0)
+        if (c.x + 1 < _voxels.GetLength(0) && _voxels[c.x + 1, c.y, c.z] == 0)
             GenerateFace(c + Right, Forward, Up);
 
         //Left
-        if (c.x - 1 < 0 || _voxels[c.x - 1, c.y, c.z] == 0)
+        if (c.x - 1 > 0 && _voxels[c.x - 1, c.y, c.z] == 0)
             GenerateFace(c + Forward, Back, Up);
 
         //Back
-        if (c.z + 1 >= _voxels.GetLength(2) || _voxels[c.x, c.y, c.z + 1] == 0)
+        if (c.z + 1 < _voxels.GetLength(2) && _voxels[c.x, c.y, c.z + 1] == 0)
             GenerateFace(c + Forward + Right, Left, Up);
 
         //Bottom
-        if (c.y - 1 < 0 || _voxels[c.x, c.y - 1, c.z] == 0)
+        if (c.y - 1 > 0 && _voxels[c.x, c.y - 1, c.z] == 0)
             GenerateFace(c + Forward, Right, Back);
 
         //Top
-        if (c.y + 1 >= _voxels.GetLength(1) || _voxels[c.x, c.y + 1, c.z] == 0)
+        if (c.y + 1 < _voxels.GetLength(1) && _voxels[c.x, c.y + 1, c.z] == 0)
             GenerateFace(c + Up, Right, Forward);
     }
 
     private void GenerateFace(Vector3 startPos, Vector3 right, Vector3 up)
     {
-        startPos = (startPos - (_worldSize * 0.5f)) * _cubeSize;
+        Vector3Int offset = new Vector3Int((int)(_worldSize.x * 0.5f), _worldSize.y, (int)(_worldSize.z * 0.5f));
+
+        startPos = (startPos - offset) * _cubeSize;
         right *= _cubeSize;
         up *= _cubeSize;
 
