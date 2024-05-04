@@ -152,12 +152,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88a5944c39359474a997ce8a124f3ea1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _centerRadius: 4
-  _numRooms: 0
-  _roomSize: 0
+  _worldSize: {x: 100, y: 100, z: 100}
   _cubeSize: 5
-  _worldSize: {x: 20, y: 20, z: 20}
   _cubeMaterial: {fileID: 2100000, guid: b06798ef4f224434d833d342854e37af, type: 2}
+  _centerRadius: 10
+  _numRooms: 20
+  _roomSizes:
+  - 3
+  - 5
+  - 10
 --- !u!4 &206534929
 Transform:
   m_ObjectHideFlags: 0
