@@ -105,7 +105,9 @@ public class WorldManager : MonoBehaviour
             {
                 for (int z = minBounds.z; z <= maxBounds.z; z++)
                 {
-                    if (DistancePointLine(new Vector3Int(x, y, z), a, b) <= radius)
+                    float distance = DistancePointLine(new Vector3Int(x, y, z), a, b);
+
+                    if (distance <= radius)
                     {
                         _voxels[x, y, z] = 1;
                     }
@@ -116,11 +118,11 @@ public class WorldManager : MonoBehaviour
 
     private float DistancePointLine(Vector3Int point, Vector3Int linePointA, Vector3Int linePointB)
     {
-        Vector3 direction = linePointB - linePointA;
+        Vector3 lineVector = linePointB - linePointA;
+        Vector3 pointVector = point - linePointA;
+        float projectedLength = Vector3.Dot(pointVector, lineVector.normalized);
+        Vector3 projectedPoint = linePointA + (projectedLength * lineVector.normalized);
 
-        float t = Vector3.Dot(point - linePointA, direction) / Vector3.Dot(direction, direction);
-        Vector3 closestPoint = linePointA + Mathf.Clamp01(t) * direction;
-
-        return Vector3.Distance(point, closestPoint);
+        return Vector3.Distance(point, projectedPoint);
     }
 }
