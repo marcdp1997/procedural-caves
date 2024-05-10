@@ -24,29 +24,14 @@ public class WorldManager : MonoBehaviour
 
     private void Start()
     {
-        PopulateVoxels();
+        _voxels = new byte[_worldSize.x, _worldSize.y, _worldSize.z];
+
         CreateCenter();
         CreateRooms();
         CreateConnections();
 
         new WorldCreator(_voxels, _cubeSize, _cubeMaterial);
     }
-
-    private void PopulateVoxels()
-    {
-        _voxels = new byte[_worldSize.x, _worldSize.y, _worldSize.z];
-
-        for (int x = 0; x < _worldSize.x; x++)
-        {
-            for (int y = 0; y < _worldSize.y; y++)
-            {
-                for (int z = 0; z < _worldSize.z; z++)
-                {
-                    _voxels[x, y, z] = 1;
-                }
-            }
-        }
-    }  
 
     private void CreateCenter()
     {
@@ -87,7 +72,7 @@ public class WorldManager : MonoBehaviour
             {
                 for (int z = initPosZ; z < initPosZ + roomSize; z++)
                 {
-                     _voxels[x, y, z] = 0;
+                     _voxels[x, y, z] = 1;
                 }
             }
         }
@@ -106,17 +91,23 @@ public class WorldManager : MonoBehaviour
 
     private void CreatePath(Vector3Int a, Vector3Int b, float radius)
     {
-        for (int x = 0; x < _worldSize.x; x++)
-        {
-            for (int y = 0; y < _worldSize.y; y++)
-            {
-                for (int z = 0; z < _worldSize.z; z++)
-                {
-                    float distance = DistancePointLine(new Vector3Int(x, y, z), a, b);
+        Vector3Int minBounds = Vector3Int.Min(a, b) - new Vector3Int((int)radius, (int)radius, (int)radius);
+        Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int((int)radius, (int)radius, (int)radius);
 
-                    if (distance <= radius)
+        minBounds = Vector3Int.Max(minBounds, Vector3Int.zero);
+        maxBounds.x = Mathf.Min(maxBounds.x, _worldSize.x - 1);
+        maxBounds.y = Mathf.Min(maxBounds.y, _worldSize.y - 1);
+        maxBounds.z = Mathf.Min(maxBounds.z, _worldSize.z - 1);
+
+        for (int x = minBounds.x; x <= maxBounds.x; x++)
+        {
+            for (int y = minBounds.y; y <= maxBounds.y; y++)
+            {
+                for (int z = minBounds.z; z <= maxBounds.z; z++)
+                {
+                    if (DistancePointLine(new Vector3Int(x, y, z), a, b) <= radius)
                     {
-                        _voxels[x, y, z] = 0;
+                        _voxels[x, y, z] = 1;
                     }
                 }
             }

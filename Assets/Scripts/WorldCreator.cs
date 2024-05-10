@@ -85,13 +85,13 @@ public class WorldCreator
         _vertices.Add(startPos + up); //2
         _vertices.Add(startPos + up + right); //3
 
-        _triangles.Add(_lastVertex);
+        _triangles.Add(_lastVertex + 3);
         _triangles.Add(_lastVertex + 2);
-        _triangles.Add(_lastVertex + 3);
-
         _triangles.Add(_lastVertex);
-        _triangles.Add(_lastVertex + 3);
+
         _triangles.Add(_lastVertex + 1);
+        _triangles.Add(_lastVertex + 3);
+        _triangles.Add(_lastVertex);
 
         TryCreateMesh();
     }
