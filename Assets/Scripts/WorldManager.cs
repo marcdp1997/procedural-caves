@@ -5,14 +5,14 @@ public class WorldManager : MonoBehaviour
 {
     [Header("General")]
     [SerializeField] private Vector3Int _worldSize;
-    [SerializeField] private float _cubeSize;
+    [SerializeField] private int _cubeSize;
     [SerializeField] private Material _cubeMaterial;
 
     [Header("Center")]
     [SerializeField] private int _centerRadius;
 
     [Header("Rooms")]
-    [SerializeField] private float _numRooms;
+    [SerializeField] private int _numRooms;
     [SerializeField] private List<int> _roomSizes;
 
     [Header("Paths")]
@@ -89,10 +89,11 @@ public class WorldManager : MonoBehaviour
             CreatePath(connections[i].Item1, connections[i].Item2, _pathSizes[Random.Range(0, _pathSizes.Count)]);
     }
 
-    private void CreatePath(Vector3Int a, Vector3Int b, float radius)
+    private void CreatePath(Vector3Int a, Vector3Int b, int radius)
     {
-        Vector3Int minBounds = Vector3Int.Min(a, b) - new Vector3Int((int)radius, (int)radius, (int)radius);
-        Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int((int)radius, (int)radius, (int)radius);
+        Vector3Int minBounds = Vector3Int.Min(a, b) - new Vector3Int(radius, radius, radius);
+        Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int(radius, radius, radius);
+        Vector3 line = b - a;
 
         minBounds = Vector3Int.Max(minBounds, Vector3Int.zero);
         maxBounds.x = Mathf.Min(maxBounds.x, _worldSize.x - 1);
@@ -105,9 +106,7 @@ public class WorldManager : MonoBehaviour
             {
                 for (int z = minBounds.z; z <= maxBounds.z; z++)
                 {
-                    float distance = DistancePointLine(new Vector3Int(x, y, z), a, b);
-
-                    if (distance <= radius)
+                    if (DistancePointLine(new Vector3Int(x, y, z), a, line) <= radius)
                     {
                         _voxels[x, y, z] = 1;
                     }
@@ -116,13 +115,9 @@ public class WorldManager : MonoBehaviour
         }
     }
 
-    private float DistancePointLine(Vector3Int point, Vector3Int linePointA, Vector3Int linePointB)
+    private float DistancePointLine(Vector3Int currPos, Vector3Int origin, Vector3 line)
     {
-        Vector3 lineVector = linePointB - linePointA;
-        Vector3 pointVector = point - linePointA;
-        float projectedLength = Vector3.Dot(pointVector, lineVector.normalized);
-        Vector3 projectedPoint = linePointA + (projectedLength * lineVector.normalized);
-
-        return Vector3.Distance(point, projectedPoint);
+        Vector3 projectedPoint = origin + ((currPos - origin).magnitude * line.normalized);
+        return Vector3.Distance(currPos, projectedPoint);
     }
 }
