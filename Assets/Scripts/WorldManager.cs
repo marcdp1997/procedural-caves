@@ -1,5 +1,21 @@
+using JetBrains.Annotations;
 using System.Collections.Generic;
 using UnityEngine;
+
+[System.Serializable]
+public struct ZoneData
+{
+    public int Radius;
+    public int NumRooms;
+    public int RoomRadius;
+    public int PathRadius;
+}
+
+public struct RoomData
+{
+    public Vector3Int Center;
+    public int ZoneId;
+}
 
 public class WorldManager : MonoBehaviour
 {
@@ -8,91 +24,118 @@ public class WorldManager : MonoBehaviour
     [SerializeField] private int _cubeSize;
     [SerializeField] private Material _cubeMaterial;
 
-    [Header("Center")]
+    [Header("Zones")]
     [SerializeField] private int _centerRadius;
-
-    [Header("Rooms")]
-    [SerializeField] private int _numRooms;
-    [SerializeField] private List<int> _roomSizes;
-
-    [Header("Paths")]
-    [SerializeField] private List<int> _pathSizes;
-    [SerializeField] [Range(0, 100)] private int _randomPathPerc;
+    [SerializeField] [Range(0, 100)] private int _randomConnections;
+    [SerializeField] private List<ZoneData> _zonesData;
 
     private byte[,,] _voxels;
-    private List<Vector3Int> _roomsCenter;
+    private Vector3Int _worldCenter;
+    private List<RoomData> _roomsData;
+
+    private void Awake()
+    {
+        _voxels = new byte[_worldSize.x, _worldSize.y, _worldSize.z];
+        _worldCenter = _worldSize / 2;
+        _roomsData = new List<RoomData>();
+    }
 
     private void Start()
     {
-        _voxels = new byte[_worldSize.x, _worldSize.y, _worldSize.z];
-
-        CreateCenter();
-        CreateRooms();
-        CreateConnections();
-
+        CreateWorld();
         new WorldCreator(_voxels, _cubeSize, _cubeMaterial);
+    }
+
+    private void CreateWorld()
+    {
+        CreateCenter();
+
+        for (int i = 0; i < _zonesData.Count; i++)
+            CreateRooms(i);
+
+        CreateConnections();
     }
 
     private void CreateCenter()
     {
-        int cylinderCenterX = _worldSize.x / 2;
-        int cylinderCenterZ = _worldSize.z / 2;
-        Vector3Int a = new Vector3Int(cylinderCenterX, 0, cylinderCenterZ);
-        Vector3Int b = new Vector3Int(cylinderCenterX, _worldSize.y, cylinderCenterZ);
+        int centerRadius = _centerRadius;
 
-        CreatePath(a, b, _centerRadius);
-    }
-
-    private void CreateRooms()
-    {
-        _roomsCenter = new List<Vector3Int>();
-
-        for (int i = 0; i < _numRooms; i++)
+        if (centerRadius > 0)
         {
-            int roomSizeIndex = Random.Range(0, _roomSizes.Count);
-            int roomHalfSize = (int)(_roomSizes[roomSizeIndex] * 0.5f);
+            Vector3Int a = new Vector3Int(_worldCenter.x, 0, _worldCenter.z);
+            Vector3Int b = new Vector3Int(_worldCenter.x, _worldSize.y, _worldCenter.z);
 
-            int x = Random.Range(roomHalfSize, _worldSize.x - roomHalfSize);
-            int y = Random.Range(roomHalfSize, _worldSize.y - roomHalfSize);
-            int z = Random.Range(roomHalfSize, _worldSize.z - roomHalfSize);
-            CreateRoom(new Vector3Int(x, y, z), _roomSizes[roomSizeIndex]);
+            CreatePath(a, b, centerRadius);
         }
     }
 
-    private void CreateRoom(Vector3Int position, float roomSize)
+    private void CreateRooms(int zoneId)
     {
-        int roomHalfSize = (int)(roomSize * 0.5f);
-        int initPosX = position.x - roomHalfSize;
-        int initPosY = position.y - roomHalfSize;
-        int initPosZ = position.z - roomHalfSize;
+        int numRooms = _zonesData[zoneId].NumRooms;
 
-        for (int x = initPosX; x < initPosX + roomSize; x++)
+        for (int i = 0; i < numRooms; i++)
+            CreateRoom(zoneId);
+    }
+
+    private void CreateRoom(int zoneId)
+    {
+        Vector3Int roomCenter = GetRoomRandomPosition(zoneId);
+
+        int radius = _zonesData[zoneId].RoomRadius;
+        Vector3Int minBounds = roomCenter - new Vector3Int(radius, radius, radius);
+        Vector3Int maxBounds = roomCenter + new Vector3Int(radius, radius, radius);
+
+        for (int x = minBounds.x; x < maxBounds.x; x++)
         {
-            for (int y = initPosY; y < initPosY + roomSize; y++)
+            for (int y = minBounds.y; y < maxBounds.y; y++)
             {
-                for (int z = initPosZ; z < initPosZ + roomSize; z++)
+                for (int z = minBounds.z; z < maxBounds.z; z++)
                 {
-                     _voxels[x, y, z] = 1;
+                    if (Vector3.Distance(new Vector3Int(x, y, z), roomCenter) <= radius)
+                        _voxels[x, y, z] = 1;
                 }
             }
         }
 
-        _roomsCenter.Add(position);
+        _roomsData.Add(new RoomData { Center = roomCenter, ZoneId = zoneId });
+    }
+
+    private Vector3Int GetRoomRandomPosition(int zoneId)
+    {
+        int prevZoneRadius = zoneId > 0 ? _zonesData[zoneId - 1].Radius : _centerRadius;
+        int zoneRadius = _zonesData[zoneId].Radius - prevZoneRadius;
+        int roomRadius = _zonesData[zoneId].RoomRadius;
+
+        Vector3Int roomCenter = new Vector3Int(
+            Random.Range(_worldCenter.x - zoneRadius + roomRadius, _worldCenter.x + zoneRadius - roomRadius),
+            Random.Range(roomRadius, _worldSize.y - roomRadius),
+            Random.Range(_worldCenter.z - zoneRadius + roomRadius, _worldCenter.z + zoneRadius - roomRadius)
+        );
+
+        Vector3 roomToCenterLine = (roomCenter - new Vector3(_worldCenter.x, roomCenter.y, _worldCenter.z));
+        roomCenter += Vector3Int.RoundToInt(roomToCenterLine.normalized * prevZoneRadius);
+
+        return roomCenter;
     }
 
     private void CreateConnections()
     {
-        RoomCommunicator roomCommunicator = new RoomCommunicator(_roomsCenter, _randomPathPerc);
-        List<(Vector3Int, Vector3Int)> connections = roomCommunicator.DetermineConnections();
+        RoomCommunicator roomCommunicator = new RoomCommunicator(_roomsData, _randomConnections);
+        List<(RoomData, RoomData)> connections = roomCommunicator.DetermineConnections();
 
         for (int i = 0; i < connections.Count; i++)
-            CreatePath(connections[i].Item1, connections[i].Item2, _pathSizes[Random.Range(0, _pathSizes.Count)]);
+        {
+            int room1ZoneId = connections[i].Item1.ZoneId;
+            int room2ZoneId = connections[i].Item2.ZoneId;
+            int pathSize = (room1ZoneId >= room2ZoneId) ? _zonesData[room1ZoneId].PathRadius : _zonesData[room2ZoneId].PathRadius;
+            CreatePath(connections[i].Item1.Center, connections[i].Item2.Center, pathSize);
+        }
     }
 
     private void CreatePath(Vector3Int a, Vector3Int b, int radius)
     {
         Vector3Int minBounds = Vector3Int.Min(a, b) - new Vector3Int(radius, radius, radius);
-        Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int(radius, radius, radius);
+        Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int(radius, radius, radius) ;
         Vector3 line = b - a;
 
         minBounds = Vector3Int.Max(minBounds, Vector3Int.zero);
@@ -107,9 +150,7 @@ public class WorldManager : MonoBehaviour
                 for (int z = minBounds.z; z <= maxBounds.z; z++)
                 {
                     if (DistancePointLine(new Vector3Int(x, y, z), a, line) <= radius)
-                    {
                         _voxels[x, y, z] = 1;
-                    }
                 }
             }
         }
@@ -120,4 +161,14 @@ public class WorldManager : MonoBehaviour
         Vector3 projectedPoint = origin + ((currPos - origin).magnitude * line.normalized);
         return Vector3.Distance(currPos, projectedPoint);
     }
+
+    public Vector3Int GetWorldSize() { return _worldSize; }
+
+    public int GetCenterRadius() { return _centerRadius; }
+
+    public List<ZoneData> GetZonesData() { return _zonesData; }
+
+    public int GetRandomConnections() { return _randomConnections; }
+
+    public List<RoomData> GetRoomsData() { return _roomsData; }
 }

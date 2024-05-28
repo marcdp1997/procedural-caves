@@ -3,46 +3,55 @@ using UnityEngine;
 
 public class RoomCommunicator
 {
-    private int _randomConnection;
-    private List<Vector3Int> _roomsCenter;
-    private List<(Vector3Int, Vector3Int)> _connections;
+    private int _randomConnections;
+    private List<RoomData> _roomsData;
+    private List<(RoomData, RoomData)> _connections;
 
-    public RoomCommunicator(List<Vector3Int> roomsCenter, int randomConnection)
+    public RoomCommunicator(List<RoomData> roomsData, int randomConnections)
     {
-        _roomsCenter = roomsCenter;
-        _randomConnection = randomConnection;
-        _connections = new List<(Vector3Int, Vector3Int)>();
+        _roomsData = roomsData;
+        _randomConnections = randomConnections;
+        _connections = new List<(RoomData, RoomData)>();
     }
 
-    public List<(Vector3Int, Vector3Int)> DetermineConnections()
+    public List<(RoomData, RoomData)> DetermineConnections()
     {
-        for (int i = 0; i < _roomsCenter.Count - 1; i++)
+        for (int i = 0; i < _roomsData.Count; i++)
         {
-            float closestDistance = 0;
-            int closestRoomIndex = 0;
+            float closestDistance = float.MaxValue;
+            int closestRoomIndex = -1;
 
-            for (int j = i + 1; j < _roomsCenter.Count; j++)
+            for (int j = 0; j < _roomsData.Count; j++)
             {
-                if (Random.Range(0, 100) < _randomConnection)
-                    AddConnection(_roomsCenter[i], _roomsCenter[j]);
+                if (i == j) continue;
 
-                float distance = Vector3.Distance(_roomsCenter[i], _roomsCenter[j]);
-                if (closestDistance == 0 || distance < closestDistance)
+                if (Random.Range(0, 100) < _randomConnections)
+                {
+                    AddConnection(_roomsData[i], _roomsData[j]);
+                    continue;
+                }
+
+                float distance = Vector3.Distance(_roomsData[i].Center, _roomsData[j].Center);
+                if (distance < closestDistance && !ConnectionExists(_roomsData[i], _roomsData[j]))
                 {
                     closestRoomIndex = j;
                     closestDistance = distance;
                 }
             }
 
-            AddConnection(_roomsCenter[i], _roomsCenter[closestRoomIndex]);
+            AddConnection(_roomsData[i], _roomsData[closestRoomIndex]);
         }
 
         return _connections;
     }
 
-    private void AddConnection(Vector3Int room1, Vector3Int room2)
+    private bool ConnectionExists(RoomData room1, RoomData room2)
     {
-        if (!_connections.Contains((room1, room2)))
-            _connections.Add((room1, room2));
+        return _connections.Contains((room1, room2)) || _connections.Contains((room2, room1));
+    }
+
+    private void AddConnection(RoomData room1, RoomData room2)
+    {
+        _connections.Add((room1, room2));
     }
 }

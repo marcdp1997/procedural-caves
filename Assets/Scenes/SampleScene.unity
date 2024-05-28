@@ -133,8 +133,9 @@ GameObject:
   m_Component:
   - component: {fileID: 206534929}
   - component: {fileID: 206534928}
+  - component: {fileID: 206534930}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: World Manager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -152,14 +153,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88a5944c39359474a997ce8a124f3ea1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _worldSize: {x: 50, y: 50, z: 50}
-  _cubeSize: 5
+  _worldSize: {x: 400, y: 100, z: 400}
+  _cubeSize: 1
   _cubeMaterial: {fileID: 2100000, guid: b06798ef4f224434d833d342854e37af, type: 2}
-  _centerRadius: 6
-  _numRooms: 15
-  _roomSizes: 050000000a000000
-  _pathSizes: 0100000002000000
-  _randomPathPerc: 15
+  _centerRadius: 30
+  _randomConnectionsPerc: 1
+  _zonesData:
+  - Radius: 100
+    NumRooms: 5
+    RoomRadius: 20
+    PathRadius: 7
+  - Radius: 199
+    NumRooms: 10
+    RoomRadius: 10
+    PathRadius: 3
 --- !u!4 &206534929
 Transform:
   m_ObjectHideFlags: 0
@@ -175,6 +182,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &206534930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206534927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20a7e50a7371e104499375b4c3a1c5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _drawGizmos: 1
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
