@@ -157,7 +157,7 @@ MonoBehaviour:
   _cubeSize: 1
   _cubeMaterial: {fileID: 2100000, guid: b06798ef4f224434d833d342854e37af, type: 2}
   _centerRadius: 30
-  _randomConnectionsPerc: 1
+  _randomConnections: 0
   _zonesData:
   - Radius: 100
     NumRooms: 5

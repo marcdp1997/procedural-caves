@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -66,6 +65,7 @@ public class WorldManager : MonoBehaviour
             Vector3Int b = new Vector3Int(_worldCenter.x, _worldSize.y, _worldCenter.z);
 
             CreatePath(a, b, centerRadius);
+            _roomsData.Add(new RoomData { Center = _worldCenter, ZoneId = -1 });
         }
     }
 
