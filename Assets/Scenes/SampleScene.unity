@@ -247,7 +247,7 @@ LineRenderer:
   - {x: 0, y: 0, z: 1}
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 0.1
+    widthMultiplier: 0.2
     widthCurve:
       serializedVersion: 2
       m_Curve:
@@ -620,10 +620,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Laser
   _worldGenerator: {fileID: 66508489}
-  _player: {fileID: 0}
   _lineRenderer: {fileID: 123804622}
   _rayDistance: 15
-  _explosionRadius: 5
+  _explosionRadius: 2
 --- !u!1 &831936801
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class WorldGenerator : MonoBehaviour
 {
@@ -93,7 +92,7 @@ public class WorldGenerator : MonoBehaviour
         Vector3Int voxelPos = Vector3Int.RoundToInt(localPos);
 
         ModifyTerrainSphere(voxelPos, radius, add);
-        _marchingCubes.MarchCubes(_voxels);
+        _marchingCubes.MarchCubes(_voxels, voxelPos);
     }
 
     private void ModifyTerrainSphere(Vector3Int voxelPosition, int radius, bool add)

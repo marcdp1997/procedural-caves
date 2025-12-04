@@ -4,7 +4,7 @@ using UnityEngine;
 public class MarchingCubes
 {
     private const int IsoLevel = 1;
-    private const int ChunkSize = 18;
+    private const int ChunkSize = 10;
 
     private byte[,,] _voxels;
     private readonly float _voxelScale;
@@ -14,13 +14,12 @@ public class MarchingCubes
     private readonly float[] _cubeCorners;
     private readonly Material _cubeMaterial;
     private readonly GameObject _worldRoot;
-
     private readonly Dictionary<Vector3Int, ChunkData> _chunks;
 
     private class ChunkData
     {
-        public GameObject ChunkObject;
-        public int VoxelHash;
+        public Object ChunkObject;
+        public int Hash;
     }
 
     public MarchingCubes(Vector3Int worldSize, float voxelScale, Material cubeMaterial)
@@ -43,24 +42,56 @@ public class MarchingCubes
         _voxels = voxels;
 
         for (int cx = 0; cx < _worldSize.x; cx += ChunkSize)
+        {
             for (int cy = 0; cy < _worldSize.y; cy += ChunkSize)
+            {
                 for (int cz = 0; cz < _worldSize.z; cz += ChunkSize)
+                {
                     GenerateChunk(cx, cy, cz);
+                }
+            }
+        }
+    }
+
+    public void MarchCubes(byte[,,] voxels, Vector3Int voxelPos)
+    {
+        _voxels = voxels;
+
+        Vector3Int voxelChunk = new(
+            (voxelPos.x / ChunkSize) * ChunkSize,
+            (voxelPos.y / ChunkSize) * ChunkSize,
+            (voxelPos.z / ChunkSize) * ChunkSize
+        );
+
+        for (int cx = 0; cx < _worldSize.x; cx += ChunkSize)
+        {
+            for (int cy = 0; cy < _worldSize.y; cy += ChunkSize)
+            {
+                for (int cz = 0; cz < _worldSize.z; cz += ChunkSize)
+                {
+                    // Affected chunks → chunk of the voxel position and its 26 neighbours
+                    if (Mathf.Abs(cx - voxelChunk.x) > ChunkSize ||
+                        Mathf.Abs(cy - voxelChunk.y) > ChunkSize ||
+                        Mathf.Abs(cz - voxelChunk.z) > ChunkSize)
+                        continue;
+
+                    Vector3Int chunkCoord = new(cx, cy, cz);
+                    if (!_chunks.TryGetValue(chunkCoord, out ChunkData chunkData))
+                        continue;
+
+                    // Only update chunks with different voxel values
+                    int currHash = CalculateChunkHash(cx, cy, cz);
+                    if (currHash == chunkData.Hash) continue;
+
+                    Object.Destroy(chunkData.ChunkObject);
+                    GenerateChunk(cx, cy, cz);
+                }
+            }
+        }
     }
 
     private void GenerateChunk(int startX, int startY, int startZ)
     {
-        Vector3Int chunkCoord = new(startX / ChunkSize, startY / ChunkSize, startZ / ChunkSize);
-        int newHash = CalculateChunkHash(startX, startY, startZ);
-
-        if (_chunks.TryGetValue(chunkCoord, out ChunkData existingChunk))
-        {
-            if (existingChunk.VoxelHash == newHash)
-                return;
-
-            Object.Destroy(existingChunk.ChunkObject);
-        }
-
         _vertices.Clear();
         _triangles.Clear();
 
@@ -74,14 +105,7 @@ public class MarchingCubes
                     MarchCube(new Vector3Int(x, y, z));
 
         if (_vertices.Count > 0)
-        {
-            GameObject chunkObject = CreateMeshChunk();
-            _chunks[chunkCoord] = new ChunkData
-            {
-                ChunkObject = chunkObject,
-                VoxelHash = newHash
-            };
-        }
+            AddChunk(startX, startY, startZ);
     }
 
     private int CalculateChunkHash(int startX, int startY, int startZ)
@@ -139,16 +163,25 @@ public class MarchingCubes
 
             Vector3 edgeStart = cubePos + MarchingTable.Edges[edgeIndex, 0];
             Vector3 edgeEnd = cubePos + MarchingTable.Edges[edgeIndex, 1];
-            Vector3 vertex = (edgeStart + edgeEnd) * 0.5f * _voxelScale;
+            Vector3 vertex = _voxelScale * 0.5f * (edgeStart + edgeEnd);
 
             _vertices.Add(vertex);
             _triangles.Add(_vertices.Count - 1);
         }
     }
 
-    private GameObject CreateMeshChunk()
+    private void AddChunk(int startX, int startY, int startZ)
     {
-        GameObject go = new("Chunk");
+        Vector3Int chunkCoord = new(startX, startY, startZ);
+        GameObject chunkObject = CreateMesh($"Chunk({startX}, {startY}, {startZ})");
+        int hash = CalculateChunkHash(startX, startY, startZ);
+
+        _chunks[chunkCoord] = new ChunkData { ChunkObject = chunkObject, Hash = hash };
+    }
+
+    private GameObject CreateMesh(string name)
+    {
+        GameObject go = new(name);
         go.transform.parent = _worldRoot.transform;
         go.transform.localPosition = Vector3.zero;
         go.layer = LayerMask.NameToLayer("Terrain");
@@ -166,7 +199,6 @@ public class MarchingCubes
 
         MeshCollider mc = go.AddComponent<MeshCollider>();
         mc.sharedMesh = mesh;
-        mc.cookingOptions = MeshColliderCookingOptions.None;
 
         return go;
     }
