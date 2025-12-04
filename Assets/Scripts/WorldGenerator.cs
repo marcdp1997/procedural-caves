@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class WorldGenerator : MonoBehaviour
 {
     [Header("General")]
     [SerializeField] private bool _drawGizmos;
     [SerializeField] private Vector3Int _worldSize;
-    [SerializeField] private float _cubeSize;
+    [SerializeField] private float _voxelScale;
     [SerializeField] private Material _cubeMaterial;
 
     [Header("Zones")]
@@ -16,12 +17,14 @@ public class WorldGenerator : MonoBehaviour
     private byte[,,] _voxels;
     private Vector3Int _worldCenter;
     private List<RoomData> _rooms;
+    private MarchingCubes _marchingCubes;
 
     private void Awake()
     {
         _voxels = new byte[_worldSize.x, _worldSize.y, _worldSize.z];
         _worldCenter = _worldSize / 2;
         _rooms = new List<RoomData>();
+        _marchingCubes = new(_worldSize, _voxelScale, _cubeMaterial);
     }
 
     private void Start()
@@ -32,8 +35,7 @@ public class WorldGenerator : MonoBehaviour
     private void GenerateWorld()
     {
         PopulateVoxels();
-        MarchingCubes marchingCubes = new(_voxels, _cubeSize, _cubeMaterial);
-        marchingCubes.MarchCubes();
+        _marchingCubes.MarchCubes(_voxels);
     }
 
     private void PopulateVoxels()
@@ -43,19 +45,14 @@ public class WorldGenerator : MonoBehaviour
         for (int i = 0; i < _zonesData.Count; i++)
             CreateRooms(i);
 
-        CreateConnections();
+        CreatePaths();
     }
 
     private void CreateCenter()
     {
-        int centerRadius = _centerRadius;
-
-        if (centerRadius > 0)
+        if (_centerRadius > 0)
         {
-            Vector3Int a = new(_worldCenter.x, 0, _worldCenter.z);
-            Vector3Int b = new(_worldCenter.x, _worldSize.y, _worldCenter.z);
-
-            CreatePath(a, b, centerRadius);
+            ModifyTerrainSphere(_worldCenter, _centerRadius, false);
             _rooms.Add(new RoomData { Center = _worldCenter, ZoneId = -1 });
         }
     }
@@ -65,30 +62,11 @@ public class WorldGenerator : MonoBehaviour
         int numRooms = _zonesData[zoneId].NumRooms;
 
         for (int i = 0; i < numRooms; i++)
-            CreateRoom(zoneId);
-    }
-
-    private void CreateRoom(int zoneId)
-    {
-        Vector3Int roomCenter = GetRoomRandomPosition(zoneId);
-
-        int radius = _zonesData[zoneId].RoomRadius;
-        Vector3Int minBounds = roomCenter - new Vector3Int(radius, radius, radius);
-        Vector3Int maxBounds = roomCenter + new Vector3Int(radius, radius, radius);
-
-        for (int x = minBounds.x; x < maxBounds.x; x++)
         {
-            for (int y = minBounds.y; y < maxBounds.y; y++)
-            {
-                for (int z = minBounds.z; z < maxBounds.z; z++)
-                {
-                    if (Vector3.Distance(new Vector3Int(x, y, z), roomCenter) <= radius)
-                        _voxels[x, y, z] = 1;
-                }
-            }
+            Vector3Int roomCenter = GetRoomRandomPosition(zoneId);
+            ModifyTerrainSphere(roomCenter, _zonesData[zoneId].RoomRadius, false);
+            _rooms.Add(new RoomData { Center = roomCenter, ZoneId = zoneId });
         }
-
-        _rooms.Add(new RoomData { Center = roomCenter, ZoneId = zoneId });
     }
 
     private Vector3Int GetRoomRandomPosition(int zoneId)
@@ -109,7 +87,36 @@ public class WorldGenerator : MonoBehaviour
         return roomCenter;
     }
 
-    private void CreateConnections()
+    public void ModifyTerrain(Vector3 worldPosition, int radius, bool add)
+    {
+        Vector3 localPos = worldPosition / _voxelScale;
+        Vector3Int voxelPos = Vector3Int.RoundToInt(localPos);
+
+        ModifyTerrainSphere(voxelPos, radius, add);
+        _marchingCubes.MarchCubes(_voxels);
+    }
+
+    private void ModifyTerrainSphere(Vector3Int voxelPosition, int radius, bool add)
+    {
+        Vector3Int minBounds = voxelPosition - new Vector3Int(radius, radius, radius);
+        Vector3Int maxBounds = voxelPosition + new Vector3Int(radius, radius, radius);
+
+        for (int x = minBounds.x; x < maxBounds.x; x++)
+        {
+            for (int y = minBounds.y; y < maxBounds.y; y++)
+            {
+                for (int z = minBounds.z; z < maxBounds.z; z++)
+                {
+                    if (Vector3.Distance(new Vector3Int(x, y, z), voxelPosition) > radius)
+                        continue;
+
+                    _voxels[x, y, z] = add ? (byte)0 : (byte)1;
+                }
+            }
+        }
+    }
+
+    private void CreatePaths()
     {
         MinimumSpannigTree mst = new(_rooms);
         List<Connection> connections = mst.GenerateConnections();
@@ -119,11 +126,11 @@ public class WorldGenerator : MonoBehaviour
             int room1ZoneId = connections[i].RoomA.ZoneId;
             int room2ZoneId = connections[i].RoomB.ZoneId;
             int pathSize = (room1ZoneId >= room2ZoneId) ? _zonesData[room1ZoneId].PathRadius : _zonesData[room2ZoneId].PathRadius;
-            CreatePath(connections[i].RoomA.Center, connections[i].RoomB.Center, pathSize);
+            ModifyTerrainLine(connections[i].RoomA.Center, connections[i].RoomB.Center, pathSize, false);
         }
     }
 
-    private void CreatePath(Vector3Int a, Vector3Int b, int radius)
+    private void ModifyTerrainLine(Vector3Int a, Vector3Int b, int radius, bool add)
     {
         Vector3Int minBounds = Vector3Int.Min(a, b) - new Vector3Int(radius, radius, radius);
         Vector3Int maxBounds = Vector3Int.Max(a, b) + new Vector3Int(radius, radius, radius);
@@ -141,7 +148,7 @@ public class WorldGenerator : MonoBehaviour
                 for (int z = minBounds.z; z <= maxBounds.z; z++)
                 {
                     if (DistancePointLine(new Vector3Int(x, y, z), a, line) <= radius)
-                        _voxels[x, y, z] = 1;
+                        _voxels[x, y, z] = add ? (byte)0 : (byte)1;
                 }
             }
         }
@@ -157,22 +164,22 @@ public class WorldGenerator : MonoBehaviour
     {
         if (!_drawGizmos) return;
 
-        Vector3 worldCenter = (Vector3)(_worldSize / 2) * _cubeSize;
+        Vector3 worldCenter = (Vector3)(_worldSize / 2) * _voxelScale;
 
         // World
         Gizmos.color = Color.red;
-        Gizmos.DrawWireCube(worldCenter, (Vector3)_worldSize * _cubeSize);
+        Gizmos.DrawWireCube(worldCenter, (Vector3)_worldSize * _voxelScale);
 
         // Center
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(worldCenter, new Vector3(_centerRadius * 2, _worldSize.y, _centerRadius * 2) * _cubeSize);
+        Gizmos.DrawWireCube(worldCenter, _centerRadius * 2 * _voxelScale * Vector3.one);
 
         // Zones
         Gizmos.color = Color.blue;
         for (int i = 0; i < _zonesData.Count; i++)
         {
             int size = _zonesData[i].Radius;
-            Gizmos.DrawWireCube(worldCenter, new Vector3(size * 2, _worldSize.y, size * 2) * _cubeSize);
+            Gizmos.DrawWireCube(worldCenter, new Vector3(size * 2, _worldSize.y, size * 2) * _voxelScale);
         }
     }
 }
