@@ -6,7 +6,7 @@ public class WorldGenerator : MonoBehaviour
     [Header("General")]
     [SerializeField] private bool _drawGizmos;
     [SerializeField] private Vector3Int _worldSize;
-    [SerializeField] private int _cubeSize;
+    [SerializeField] private float _cubeSize;
     [SerializeField] private Material _cubeMaterial;
 
     [Header("Zones")]
@@ -153,15 +153,15 @@ public class WorldGenerator : MonoBehaviour
         return Vector3.Distance(currPos, projectedPoint);
     }
 
-    private void OnDrawGizmos()
+    private void OnDrawGizmosSelected()
     {
         if (!_drawGizmos) return;
 
-        Vector3 worldCenter = (_worldSize / 2) * _cubeSize;
+        Vector3 worldCenter = (Vector3)(_worldSize / 2) * _cubeSize;
 
         // World
         Gizmos.color = Color.red;
-        Gizmos.DrawWireCube(worldCenter, _worldSize * _cubeSize);
+        Gizmos.DrawWireCube(worldCenter, (Vector3)_worldSize * _cubeSize);
 
         // Center
         Gizmos.color = Color.yellow;
