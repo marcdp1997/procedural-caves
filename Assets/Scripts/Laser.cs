@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class Laser : MonoBehaviour
 {
-    private const float MinDistance = 1;
-
     [SerializeField] private WorldGenerator _worldGenerator;
     [SerializeField] private LineRenderer _lineRenderer;
     [SerializeField] private float _rayDistance = 15;
@@ -21,10 +19,9 @@ public class Laser : MonoBehaviour
 
     private void ModifyTerrain(bool add)
     {
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, transform.forward, out hit, _rayDistance, 1 << LayerMask.NameToLayer("Terrain")))
+        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, _rayDistance, 1 << LayerMask.NameToLayer("Terrain")) &&
+            hit.distance > _explosionRadius)
         {
-            if (hit.distance <= MinDistance) return;
             _worldGenerator.ModifyTerrain(hit.point, _explosionRadius, add);
         }
 

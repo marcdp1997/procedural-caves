@@ -4,7 +4,7 @@ using UnityEngine;
 public class MarchingCubes
 {
     private const int IsoLevel = 1;
-    private const int ChunkSize = 10;
+    private const int ChunkSize = 18;
 
     private byte[,,] _voxels;
     private readonly float _voxelScale;
